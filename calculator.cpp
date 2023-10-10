@@ -31,6 +31,24 @@ double compute2nums(double num2, char operation, double num1){
     }
 }
 
+/* getParenExp method
+: returns expression in the parenthesis
+input: ss(stringstream object)
+output: expression in parenthesis(string)
+*/
+string getParenExp(stringstream &ss){
+    char parenToken;
+    ss >> parenToken;
+    string logExpression;
+    if(parenToken == '('){
+        while(parenToken != ')'){
+            logExpression += parenToken;
+            ss >> parenToken;
+        }
+    }
+    return logExpression+parenToken;
+}
+
 /* calculate method
 input: aritmetic expression(string)
 output: calculation result(double)
@@ -72,7 +90,7 @@ double calculate(const string& expression){
             operStack.push(token);
         }else if(token == '^'){
             operStack.push(token);
-        }else if(token == '('){ //curly brackets
+        }else if(token == '('){ //parenthesis
             operStack.push(token);
         }else if(token == ')'){
             while(operStack.top() != '('){
@@ -85,12 +103,39 @@ double calculate(const string& expression){
                 numStack.push(compute2nums(num2, operation, num1));
             }
             operStack.pop();
-        }else if(isalpha(token)){ //logarithic operations
+        }else if(isalpha(token)){ //trigonometric operations
             string logarith;
+            do {
+                logarith += token;
+                ss >> token;
+                if(logarith == "ln"){
+                    break;
+                }
+            }while(logarith.length() < 3);
             ss.putback(token);
-            ss >> logarith;
+            
             if(logarith == "sin"){
-                
+                string parenExpression = getParenExp(ss);
+                double parenVal = calculate(parenExpression);
+                numStack.push(sin(parenVal));
+            }else if(logarith == "cos"){
+                string parenExpression = getParenExp(ss);
+                double parenVal = calculate(parenExpression);
+                numStack.push(cos(parenVal));
+            }else if(logarith == "tan"){
+                string parenExpression = getParenExp(ss);
+                double parenVal = calculate(parenExpression);
+                numStack.push(tan(parenVal));
+            }else if(logarith == "cot"){
+                string parenExpression = getParenExp(ss);
+                double parenVal = calculate(parenExpression);
+                numStack.push(compute2nums(cos(parenVal), '/', sin(parenVal)));
+            }else if(logarith == "ln"){
+                string parenExpression = getParenExp(ss);
+                double parenVal = calculate(parenExpression);
+                numStack.push(log(parenVal));
+            }else if(logarith == "log"){
+
             }
         }else {
             cerr << "Invalid character in the expression: " << token << endl;
