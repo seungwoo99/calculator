@@ -28,10 +28,30 @@ vector<string> splitExpression(const string& expression){
     char token;
     while(ss >> token){
         if(isdigit(token)){ //digits
-            ss.putback(token);
-            double num;
-            ss >> num;
-            tokens.push_back(to_string(num));
+            string digit = "";
+            bool dotted = false;
+            digit += token;
+            while(ss >> token){
+                if(isdigit(token)){
+                    digit += token;
+                }else if(token == '.'){
+                    if(dotted){
+                        ss.putback(token);
+                        break;
+                    }
+                    digit += token;
+                    dotted = true;
+                }else{
+                    ss.putback(token);
+                    break;
+                }
+            }
+            if(digit[digit.length()-1] == '.'){
+                digit.pop_back();
+                ss.putback('.');
+            }
+
+            tokens.push_back(digit);
         }else if(token == '+' || token == '-' || token == '*' || token == '/' || token == '^' 
         || token == '(' || token == ')' || token == '{' || token == '}'){ //arithmetic operations
             string arithmetic = "";
@@ -102,10 +122,25 @@ vector<bool> checkTokens(vector<string>& tokens){
     vector<int> curly;
     
     //first token
-    validations[0] = true;
-    if(tokens[0] == "+" || tokens[0] == "*" || tokens[0] == "/" || tokens[0] == "^" || isCloseBracket(tokens[0])){
-        validations[0] = false;
+    if(isdigit(tokens[0][0]) && tokens.size() > 1){
+        validations[0] = true;
+    }else if(isOpenBracket(tokens[0]) && tokens.size() > 1){
+        if(tokens[1] == "-" || isdigit(tokens[1][0]) || isTrigLog(tokens[1]) || isOpenBracket(tokens[1])){
+            validations[0] = true;
+        }
+    }else if(tokens[0] == "-" && tokens.size() > 1){
+        validations[0] = true;
+    }else if(tokens[0] == "log" && tokens.size() > 2){
+        if(stoi(tokens[1]) == 10 && tokens[2] == "("){
+            validations[0] = true;
+        }
+    }else if((tokens[0] == "sin" || tokens[0] == "cos" || tokens[0] == "tan" || tokens[0] == "cot" || tokens[0] == "ln") && tokens.size() >1){
+        if(isOpenBracket(tokens[1])){
+            validations[0] = true;
+        }
     }
+
+
     if(tokens[0] == "("){
         parenthesis.push_back(0);
     }else if(tokens[0] == "{"){
@@ -136,7 +171,7 @@ vector<bool> checkTokens(vector<string>& tokens){
                 }
             }
         }else if(isdigit(tokens[index][0])){ //digit
-            if((isOpenBracket(tokens[index-1]) || isArithmetic(tokens[index-1])) && (isCloseBracket(tokens[index+1]) || isArithmetic(tokens[index+1]))){
+            if((isOpenBracket(tokens[index-1]) || isArithmetic(tokens[index-1]) || tokens[index-1] == "-") && (isCloseBracket(tokens[index+1]) || isArithmetic(tokens[index+1]))){
                 validations[index] = true;
             }
             if(stoi(tokens[index]) == 10 && tokens[index-1] == "log"){
@@ -269,8 +304,20 @@ vector<bool> checkTokens(vector<string>& tokens){
                 }
             }
         }
-        if((!isdigit(tokens[lastIndex-1][0]) || !isCloseBracket(tokens[lastIndex-1]))){
+        if((!isdigit(tokens[lastIndex-1][0]) && !isCloseBracket(tokens[lastIndex-1])) || isalpha(tokens[lastIndex][0])){
             validations[lastIndex] = false;
+        }
+    }
+    if(!parenthesis.empty()){
+        for(int p=0; p<parenthesis.size(); p++){
+            validations[parenthesis.back()] = false;
+            parenthesis.pop_back();
+        }
+    }
+    if(!curly.empty()){
+        for(int c=0; c<curly.size(); c++){
+            validations[curly.back()] = false;
+            curly.pop_back();
         }
     }
 
@@ -387,6 +434,8 @@ double calculate(const vector<string>& equations){
                     }else{
                         break;
                     }
+                }else{
+                    break;
                 }
             }
             if(equations[index] == "-"){
@@ -419,6 +468,8 @@ double calculate(const vector<string>& equations){
                     }else{
                         break;
                     }
+                }else {
+                    break;
                 }
             }
             operStack.push(equations[index]);
@@ -451,57 +502,88 @@ double calculate(const vector<string>& equations){
             }
             operStack.pop();
         }else if(equations[index] == "sin"){ //trigonometic operations
-            while(equations[index+1] != ")"){
-                instance.push_back(equations[index+1]);
+            int openParen = 0;
+            int closeParen = 0;
+            do{
                 index++;
-            }
-            index++;
-            instance.push_back(equations[index]);
+                if(equations[index] == "("){
+                    openParen++;
+                }else if(equations[index] == ")"){
+                    closeParen++;
+                }
+                instance.push_back(equations[index]);
+            }while(openParen != closeParen);
             double parenVal = calculate(instance);
             numStack.push(sin(parenVal));
         }else if(equations[index] == "cos"){
-            while(equations[index+1] != ")"){
-                instance.push_back(equations[index+1]);
+            int openParen = 0;
+            int closeParen = 0;
+            do{
                 index++;
-            }
-            index++;
-            instance.push_back(equations[index]);
+                if(equations[index] == "("){
+                    openParen++;
+                }else if(equations[index] == ")"){
+                    closeParen++;
+                }
+                instance.push_back(equations[index]);
+            }while(openParen != closeParen);
             double parenVal = calculate(instance);
             numStack.push(cos(parenVal));
         }else if(equations[index] == "tan"){
-            while(equations[index+1] != ")"){
-                instance.push_back(equations[index+1]);
+            int openParen = 0;
+            int closeParen = 0;
+            do{
                 index++;
-            }
-            index++;
-            instance.push_back(equations[index]);
+                if(equations[index] == "("){
+                    openParen++;
+                }else if(equations[index] == ")"){
+                    closeParen++;
+                }
+                instance.push_back(equations[index]);
+            }while(openParen != closeParen);
             double parenVal = calculate(instance);
             numStack.push(tan(parenVal));
         }else if(equations[index] == "cot"){
-            while(equations[index+1] != ")"){
-                instance.push_back(equations[index+1]);
+            int openParen = 0;
+            int closeParen = 0;
+            do{
                 index++;
-            }
-            index++;
-            instance.push_back(equations[index]);
+                if(equations[index] == "("){
+                    openParen++;
+                }else if(equations[index] == ")"){
+                    closeParen++;
+                }
+                instance.push_back(equations[index]);
+            }while(openParen != closeParen);
             double parenVal = calculate(instance);
             numStack.push(compute2nums(cos(parenVal), "/", sin(parenVal)));
         }else if(equations[index] == "ln"){ //logarithmic operations
-            while(equations[index+1] != ")"){
-                instance.push_back(equations[index+1]);
+            int openParen = 0;
+            int closeParen = 0;
+            do{
                 index++;
-            }
-            index++;
-            instance.push_back(equations[index]);
+                if(equations[index] == "("){
+                    openParen++;
+                }else if(equations[index] == ")"){
+                    closeParen++;
+                }
+                instance.push_back(equations[index]);
+            }while(openParen != closeParen);
             double parenVal = calculate(instance);
             numStack.push(log(parenVal));
         }else if(equations[index] == "log"){
-            while(equations[index+1] != ")"){
-                instance.push_back(equations[index+1]);
+            int openParen = 0;
+            int closeParen = 0;
+            index += 1;
+            do{
                 index++;
-            }
-            index++;
-            instance.push_back(equations[index]);
+                if(equations[index] == "("){
+                    openParen++;
+                }else if(equations[index] == ")"){
+                    closeParen++;
+                }
+                instance.push_back(equations[index]);
+            }while(openParen != closeParen);
             double parenVal = calculate(instance);
             numStack.push(log10(parenVal));
         }
@@ -532,7 +614,7 @@ int main(){
     //get arithmetic expression
     while(true){
         string input;
-        cout << "Enter an arithmetic expression: ";
+        cout << "Enter an arithmetic expression(Enter exit to finish): ";
         getline(cin, input);
 
         //convert to lowercase alphabets
@@ -548,6 +630,9 @@ int main(){
         //split the expression into tokens
         vector<string> tokens;
         tokens = splitExpression(expression);
+        if(tokens.size() == 0){
+            continue;
+        }
 
         //check if the tokens are correct
         vector<bool> validations;
